@@ -5,15 +5,31 @@ require_relative './service/cardService.rb'
 
 Dotenv.load
 _bot_token = ENV["BOT_TOKEN"]
-# bot = Discordrb::Bot.new(token: _bot_token)
-bot = Discordrb::Commands::CommandBot.new(token: _bot_token, prefix: '!')
+bot = Discordrb::Bot.new(token: _bot_token)
+# bot = Discordrb::Commands::CommandBot.new(token: _bot_token, prefix: '!')
 
-# カウントダウン
-# /countdown 20 で発火、デフォルトは3秒
-# 残り10の倍数秒と3秒以下で残り秒数を送信する
-bot.command :countdown do |event, seconds|
+# スラッシュコマンド登録時のデバッグログを追加
+puts "[DEBUG] スラッシュコマンドを登録中..."
+
+bot.register_application_command(:countdown, "カウントダウンを開始します") do |cmd|
+  cmd.integer(:seconds, "カウントダウンする秒数", required: false)
+end
+
+bot.register_application_command(:dice, "ダイスを振ります") do |cmd|
+  cmd.string(:roll, "振るダイスの形式 (例: 2d6)", required: false)
+end
+
+puts "[DEBUG] スラッシュコマンドの登録が完了しました。"
+
+# event.optionsのキーをStringとして明示的に扱う
+bot.application_command(:countdown) do |event|
+  puts "[DEBUG] /countdown コマンドが呼び出されました。"
+  puts "[DEBUG] event.options: #{event.options.inspect}"
+
+  seconds = event.options["seconds"] || 3 # Stringキーを使用
+
   if seconds > 30
-    event.respond "秒数が大きすぎます。"
+    event.respond(content: "秒数が大きすぎます。", ephemeral: true)
     next
   end
 
@@ -24,7 +40,7 @@ bot.command :countdown do |event, seconds|
   for i in 0..seconds do
     rest = seconds - i
     if rest % 10 == 0 || rest <= 3
-      event.respond rest.to_s
+      event.respond(content: rest.to_s)
     end
     sleep(1)
   end
@@ -39,52 +55,60 @@ bot.message(contains: '#danoni') do |event|
 end
 
 # /dice 1d6 でダイスを振れる
-bot.command :dice do |event, arg|
+bot.application_command(:dice) do |event|
+  puts "[DEBUG] /dice コマンドが呼び出されました。"
+  puts "[DEBUG] event.options: #{event.options.inspect}"
+
+  arg = event.options["roll"] || "1d6" # Stringキーを使用
   line = arg.split("d")
   num = line[0].to_i
   dice = line[1].to_i
 
-  next if num <= 0 || dice <= 0 || num >= 100 || dice >= 2 ** 32
+  if num <= 0 || dice <= 0 || num >= 100 || dice >= 2 ** 32
+    event.respond(content: "無効なダイスの値です。", ephemeral: true)
+    next
+  end
 
   value = 0
   for i in 1..num do
     value += rand(1..dice)
   end
-  event.respond value.to_s
+
+  event.respond(content: "結果: #{value}")
 end
 
-bot.message(start_with: '/dice') do |event|
-  line = event.message.to_s.split(" ")[1].split("d")
-  num = line[0].to_i
-  dice = line[1].to_i
+# bot.message(start_with: '/dice') do |event|
+#   line = event.message.to_s.split(" ")[1].split("d")
+#   num = line[0].to_i
+#   dice = line[1].to_i
 
-  next if num <= 0 || dice <= 0 || num >= 100 || dice >= 2 ** 32
+#   next if num <= 0 || dice <= 0 || num >= 100 || dice >= 2 ** 32
 
-  value = 0
-  for i in 1..num do
-    value += rand(1..dice)
-  end
-  event.respond value.to_s
-end
+#   value = 0
+#   for i in 1..num do
+#     value += rand(1..dice)
+#   end
+#   event.respond value.to_s
+# end
 
 # /chance or chance でチャンスカードを引く
 bot.message(content: 'chance') do |event|
-  CardService.display_card
-  description = CardService.display_card.gsub('%NAME%', event.author.display_name.to_s)
+  card = CardService.display_card
+  description = card.gsub('%NAME%', event.author.display_name.to_s)
   event.respond description
 end
 
 # Replace `bot.message(content: '!help')` with `bot.command :help` to avoid conflicts
-bot.command :help do |event|
-  help_message = <<~HELP
-    **利用可能なコマンド:**
-    `/countdown [秒数]` - カウントダウンタイマーを開始します（デフォルト: 3秒、最大: 30秒）。
-    `/dice [x]d[y]` - x個のy面ダイスを振ります。(例: /dice 2d6)
-    `chance` - チャンスカードを引きます。
-    `!help` - このヘルプメッセージを表示します。
-  HELP
+# bot.command :help do |event|
+#   help_message = <<~HELP
+#     **利用可能なコマンド:**
+#     `/countdown [秒数]` - カウントダウンタイマーを開始します（デフォルト: 3秒、最大: 30秒）。
+#     `/dice [x]d[y]` - x個のy面ダイスを振ります。(例: /dice 2d6)
+#     `chance` - チャンスカードを引きます。
+#     `!help` - このヘルプメッセージを表示します。
+#   HELP
 
-  event.respond help_message
-end
+#   event.respond help_message
+# end
 
 bot.run
