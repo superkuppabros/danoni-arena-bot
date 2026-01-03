@@ -2,7 +2,7 @@ class ResultService
   # return {scoreName, exScore}
   def makeResultObj(line)
     items = line.split('/') # 名前や曲名に/が入ると検出できなくなる
-    title_reg_exp = %r{^【.*?】(.*?)[/\(](.*?)k-(.*?)(?:\)\s)?/}
+    title_reg_exp = %r{^【.*?】(.*)[/\(](.*?)k-(.*?)(?:\)\s)?/}
     header = title_reg_exp.match(line.to_s).to_a
     title = header[1]
     key_type = header[2]
@@ -38,7 +38,8 @@ class ResultService
 
     scoreName = "#{title}[#{level_name}]"
     exScore = result_data['ii'] * 3 + result_data['syakin'] * 2 + result_data['matari'] + result_data['kita'] * 3
+    percentage = exScore * 100 / ((result_data['ii'] + result_data['syakin'] + result_data['matari'] + result_data['shobon'] + result_data['uwan'] + result_data['ikunai'] + result_data['kita'] ) * 3).to_f
 
-    {exScore:, scoreName:}
+    {exScore:, scoreName:, percentage:}
   end
 end
