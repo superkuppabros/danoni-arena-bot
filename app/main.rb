@@ -59,39 +59,27 @@ bot.application_command(:dice) do |event|
   puts "[DEBUG] /dice コマンドが呼び出されました。"
   puts "[DEBUG] event.options: #{event.options.inspect}"
 
-  arg = event.options["roll"] || "1d6" # Stringキーを使用
+  arg = event.options["roll"] || "1d6"
   line = arg.split("d")
   num = line[0].to_i
   dice = line[1].to_i
 
-  if num <= 0 || dice <= 0 || num >= 100 || dice >= 2 ** 32
+  if num <= 0 || dice <= 0 || num >= 10 || dice >= 2 ** 32
     event.respond(content: "無効なダイスの値です。", ephemeral: true)
     next
   end
 
-  value = 0
+  dices = Array.new
   for i in 1..num do
-    value += rand(1..dice)
+    dices.push(rand(1..dice))
   end
+  sum = dices.sum
+  value = "#{sum} (#{dices.join(', ')})"
 
-  event.respond(content: "結果: #{value}")
+  event.respond(content: value)
 end
 
-# bot.message(start_with: '/dice') do |event|
-#   line = event.message.to_s.split(" ")[1].split("d")
-#   num = line[0].to_i
-#   dice = line[1].to_i
-
-#   next if num <= 0 || dice <= 0 || num >= 100 || dice >= 2 ** 32
-
-#   value = 0
-#   for i in 1..num do
-#     value += rand(1..dice)
-#   end
-#   event.respond value.to_s
-# end
-
-# /chance or chance でチャンスカードを引く
+# chance でチャンスカードを引く
 bot.message(content: 'chance') do |event|
   card = CardService.display_card
   description = card.gsub('%NAME%', event.author.display_name.to_s)
