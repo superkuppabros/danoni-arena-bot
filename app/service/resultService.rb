@@ -1,7 +1,6 @@
 class ResultService
-  # return {scoreName, exScore}
-  def makeResultObj(line)
-    items = line.split('/') # 名前や曲名に/が入ると検出できなくなる
+  private def readResult(line)
+        items = line.split('/') # 名前や曲名に/が入ると検出できなくなる
     title_reg_exp = %r{^【.*?】(.*)[/\(](.*?)k-(.*?)(?:\)\s)?/}
     header = title_reg_exp.match(line.to_s).to_a
     title = header[1]
@@ -36,10 +35,42 @@ class ResultService
       'score' => score.to_i
     }
 
+    {result_data:, title:, key_type:, level_name:, creator:}
+  end
+
+
+  def arenaResult(line)
+    parsed = readResult(line)
+    result_data = parsed[:result_data]
+    title = parsed[:title]
+    level_name = parsed[:level_name]
+
     scoreName = "#{title}[#{level_name}]"
     exScore = result_data['ii'] * 3 + result_data['syakin'] * 2 + result_data['matari'] + result_data['kita'] * 3
-    percentage = exScore * 100 / ((result_data['ii'] + result_data['syakin'] + result_data['matari'] + result_data['shobon'] + result_data['uwan'] + result_data['ikunai'] + result_data['kita'] ) * 3).to_f
+    percentage = (exScore * 100 / ((result_data['ii'] + result_data['syakin'] + result_data['matari'] + result_data['shobon'] + result_data['uwan'] + result_data['ikunai'] + result_data['kita'] ) * 3).to_f).round(4)
 
-    {exScore:, scoreName:, percentage:}
+    "Title: #{scoreName}\n" + "Points: #{exScore}\n" + "Percentage: #{percentage}%"
   end
+
+  def speedTwisterResult(line)
+    parsed = readResult(line)
+    result_data = parsed[:result_data]
+    title = parsed[:title]
+    level_name = parsed[:level_name]
+
+    scoreName = "#{title}[#{level_name}]"
+
+    normalScore = result_data['ii'] + result_data['syakin'] + result_data['kita']
+    matariScore = result_data['matari']
+    missScore = result_data['shobon'] + result_data['uwan'] + result_data['ikunai']
+    comboScore = result_data['maxcombo'] + result_data['frzcombo']
+
+    total = normalScore + matariScore + missScore
+    recoveryRate = (normalScore * 100 / total.to_f).round(4)
+    comboRate = (comboScore * 100 / total.to_f).round(4)
+
+    # {scoreName:, normalScore:, matariScore:, missScore:, recoveryRate:, comboRate:}
+    "譜面: #{scoreName}\n" + "素点: #{normalScore} (マターリ: #{matariScore}, ミス: #{missScore})\n" + "回復率: #{recoveryRate}% (#{normalScore}/#{total}) \n" + "コンボ率: #{comboRate}% (#{comboScore}/#{total})"
+  end
+
 end
