@@ -1,7 +1,7 @@
 class ResultService
   private def readResult(line)
-        items = line.split('/') # 名前や曲名に/が入ると検出できなくなる
-    title_reg_exp = %r{^【.*?】(.*)[/\(](.*?)k-(.*?)(?:\)\s)?/}
+    items = line.split('/') # 名前や曲名に/が入ると検出できなくなる
+    title_reg_exp = %r{^.*?【.*?】(.*)[/\(](.*?)k-(.*?)(?:\)\s)?/}
     header = title_reg_exp.match(line.to_s).to_a
     title = header[1]
     key_type = header[2]
@@ -9,12 +9,14 @@ class ResultService
 
     # MFV2's source
     if items[4].split('-').length == 5
+      rank = items[3]
       score = items[7].delete('Sco').split('-')[1].to_i
       note_judges = items[4].split('-').map(&:to_i)
       freeze_judges = items[5].split('-').map(&:to_i)
       combo_judges = items[6].delete('Mc').split('-').map(&:to_i)
       creator = items[2].to_s
     else
+      rank = items[2].split(':')[1]
       score = items[3].split(':')[1]
       note_judges = items[5].split('-').map(&:to_i)
       freeze_judges = items[6].split('-').map(&:to_i)
@@ -35,7 +37,7 @@ class ResultService
       'score' => score.to_i
     }
 
-    {result_data:, title:, key_type:, level_name:, creator:}
+    {result_data:, title:, key_type:, level_name:, creator:, rank:}
   end
 
 
@@ -57,6 +59,7 @@ class ResultService
     result_data = parsed[:result_data]
     title = parsed[:title]
     level_name = parsed[:level_name]
+    rank = parsed[:rank]
 
     scoreName = "#{title}[#{level_name}]"
 
@@ -69,8 +72,10 @@ class ResultService
     recoveryRate = (normalScore * 100 / total.to_f).round(4)
     comboRate = (comboScore * 100 / total.to_f).round(4)
 
+    failed_flag = rank == "F" ? "[Failed]" : ""
+
     # {scoreName:, normalScore:, matariScore:, missScore:, recoveryRate:, comboRate:}
-    "譜面: #{scoreName}\n" + "素点: #{normalScore} (マターリ: #{matariScore}, ミス: #{missScore})\n" + "回復率: #{recoveryRate}% (#{normalScore}/#{total}) \n" + "コンボ率: #{comboRate}% (#{comboScore}/#{total})"
+    "譜面: #{scoreName}\n" + "素点: #{normalScore} (マターリ: #{matariScore}, ミス: #{missScore})#{failed_flag}\n" + "回復率: #{recoveryRate}% (#{normalScore}/#{total}) \n" + "コンボ率: #{comboRate}% (#{comboScore}/#{total})"
   end
 
 end
